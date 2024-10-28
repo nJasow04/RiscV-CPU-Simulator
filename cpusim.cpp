@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 	Each line in the input file is stored as an hex and is 1 byte (each four lines are one instruction). You need to read the file line by line and store it into the memory. You may need a mechanism to convert these values to bits so that you can read opcodes, operands, etc.
 	*/
 
-	char instMem[4096];
+	char instrMem[4096];
 
 
 	if (argc < 2) {
@@ -39,27 +39,54 @@ int main(int argc, char* argv[])
 		cout<<"error opening file\n";
 		return 0; 
 	}
-	string line; 
-	int i = 0;
-	while (infile) {
-			infile>>line;
-			stringstream line2(line);
-			char x; 
-			line2>>x;
-			instMem[i] = x; // be careful about hex
-			i++;
-			line2>>x;
-			instMem[i] = x; // be careful about hex
-			cout<<instMem[i]<<endl;
-			i++;
-		}
-	int maxPC= i/4; 
+	// string line; 
+	// int i = 0;
+	// while (infile) {
+	// 		infile>>line;
+	// 		stringstream line2(line);
+	// 		char x; 
+	// 		line2>>x;
+	// 		instrMem[i] = x; // be careful about hex
+	// 		i++;
+	// 		line2>>x;
+	// 		instrMem[i] = x; // be careful about hex
+	// 		cout<<instrMem[i]<<endl;
+	// 		i++;
+	// 	}
+	
+
+	string line;
+    int i = 0; // Index for instrMem
+    while (getline(infile, line)) {
+        if (line.empty()) continue; // Skip empty lines
+
+        // Convert hex string to a byte value
+        int byteValue = stoi(line, nullptr, 16);
+
+        // Store in instrMem as a char
+        instrMem[i] = static_cast<char>(byteValue);
+        i++;
+    }
+
+    int maxPC = i; // Set maxPC as the number of bytes loaded
+    cout << "Total bytes loaded: " << maxPC << endl;
+
+    // Test output to ensure bytes are stored correctly
+    for (int j = 0; j < maxPC; j++) {
+        cout << hex << setw(2) << setfill('0') << (0xff & instrMem[j]) << " ";
+        if ((j + 1) % 4 == 0) cout << endl; // Print each 4 bytes as an instruction
+    }
+
+
+
+	// int maxPC= i; 
+	// int maxPC= i/4; 
 
 	/* Instantiate your CPU object here.  CPU class is the main class in this project that defines different components of the processor.
 	CPU class also has different functions for each stage (e.g., fetching an instruction, decoding, etc.).
 	*/
 
-	CPU myCPU;  // call the approriate constructor here to initialize the processor...  
+	CPU myCPU(instrMem);  // call the approriate constructor here to initialize the processor...  
 	// make sure to create a variable for PC and resets it to zero (e.g., unsigned int PC = 0); 
 
 	/* OPTIONAL: Instantiate your Instruction object here. */
@@ -68,14 +95,21 @@ int main(int argc, char* argv[])
 	bool done = true;
 	while (done == true) // processor's main loop. Each iteration is equal to one clock cycle.  
 	{
-		//fetch
+		// fetch
+		unsigned long instr = myCPU.fetch();
+		cout << "0x" <<instr << endl;
+		// decode
+		DecodedInstruction decoded_instr = myCPU.decode(instr);
 		
 
-		// decode
-		
-		// ... 
-		myCPU.incPC();
-		if (myCPU.readPC() > maxPC)
+		// execute
+
+		// memory
+
+		// write back
+		 
+		myCPU.incPCtemp();
+		if (myCPU.readPC() >= maxPC) 		// >= because we end up accessing memory we weren't supposed to
 			break;
 	}
 	int a0 =0;
