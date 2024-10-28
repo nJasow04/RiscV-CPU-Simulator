@@ -59,11 +59,64 @@ DecodedInstruction CPU::decode(unsigned int instruction) {
 
     // Handle immediate values based on instruction format
     // For example, for I-type instructions:
-    if (decoded.opcode == 0x13 || decoded.opcode == 0x03) { // I-type
+    if (decoded.opcode == 0x13 || decoded.opcode == 0x03) { // I-type, ORI, SRAI, LB, LW
         decoded.immediate = ((int)instruction) >> 20; // Sign-extend
+		// cout << "I-type, immediate: " << decoded.immediate << ", opcode: " << decoded.opcode << endl;
+		if (decoded.opcode == 0x13){
+			// send signal for ORI
+			if (decoded.funct3 == 6){
+				cout << "ORI" << endl;
+			}
+			else if (decoded.funct3 == 5) {
+				cout << "SRAI" << endl;
+			}
+			else cerr << "invalid instruction" << endl;
+		}
+		else if (decoded.funct3 == 0){ 	// Case for LB funct3 == 000
+			cout << "LB" << endl;
+		}
+		else {							// Case for LW funct3 == 010
+			cout << "LW" << endl;
+		}
     }
-    // Handle other instruction formats (S-type, B-type, U-type, J-type)
-    // ...
+
+	else if (decoded.opcode == 0x33) { // R-type, add, xor
+		if (decoded.funct3 == 0){
+			cout << "Add" << endl;
+		}
+		else if (decoded.funct3 == 4){
+			cout << "XOR" << endl;
+		}
+		else {
+			cerr << "invalid instruction" << endl;
+		}
+	}
+
+	else if (decoded.opcode == 0x37) { // U-type, LUI
+		decoded.immediate = ((int)instruction) >> 12;
+		cout << "LUI" << endl;
+	}
+
+	else if (decoded.opcode == 0x23) { // S-type, SB, SW
+		if (decoded.funct3 == 0){
+			cout << "SB" << endl;
+		}
+		else if (decoded.funct3 == 2){
+			cout << "SW" << endl;
+		}
+		else {
+			cerr << "invalid instruction" << endl;
+		}
+	}
+
+	else if (decoded.opcode == 0x63) { // B-type, BEQ
+		cout << "BEQ" << endl;
+		// decoded.immediate = 
+	}
+
+	else if (decoded.opcode == 0x6f) { // J-type, JAL
+		cout << "JAL" << endl;
+	}
 
     return decoded;
 }

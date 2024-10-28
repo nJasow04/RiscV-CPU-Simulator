@@ -13,6 +13,9 @@ using namespace std;
 
 // };
 
+class DecodedInstruction;
+class ControlSignals;
+
 class CPU {
 private:
 	int dmemory[4096]; //data memory byte addressable in little endian fashion;
