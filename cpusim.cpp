@@ -98,15 +98,18 @@ int main(int argc, char* argv[])
 		// fetch
 		unsigned long instr = myCPU.fetch();
 		cout << "0x" <<instr << endl;
+
 		// decode
 		DecodedInstruction decoded_instr = myCPU.decode(instr);
-		// cout << "0x" << decoded_instr.opcode << endl;
-		// cout << "0x" << decoded_instr.rd << endl;
-		// cout << "0x" << decoded_instr.funct3 << endl;
-		// cout << "0x" << decoded_instr.rs1 << endl;
-		// cout << "0x" << decoded_instr.rs2 << endl;
-		// cout << "0x" << decoded_instr.funct7 << endl;
+		cout << "Imm. : " << decoded_instr.immediate << endl;
+		
+		// Generating ControlSignals for execution
+		ControlSignals control_signals = myCPU.generateControlSignals(decoded_instr.opcode);
+		unsigned int ALUControl = myCPU.generateALUControl(control_signals.ALUOp, decoded_instr.funct3, decoded_instr.funct7);
+		cout << "ALU Op: " << control_signals.ALUOp << ", ALU Control Signal: " << ALUControl << endl;
+
 		// execute
+
 
 		// memory
 
