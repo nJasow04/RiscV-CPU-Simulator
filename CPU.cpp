@@ -104,6 +104,13 @@ DecodedInstruction CPU::decode(unsigned int instruction) {
     decoded.rs2 = (instruction >> 20) & 0x1F;
     decoded.funct7 = (instruction >> 25) & 0x7F;
 
+	// cout << "opcode: " << decoded.opcode << endl;
+	// cout << "rd: " << decoded.rd << endl;
+	// cout << "funct3: " << decoded.funct3 << endl;
+	// cout << "rs1: " << decoded.rs1 << endl;
+	// cout << "rs2: " << decoded.rs2 << endl;
+	// cout << "funct7: " << decoded.funct7 << endl;
+
     // Handle immediate values based on instruction format
     // For example, for I-type instructions:
     if (decoded.opcode == 0x13 || decoded.opcode == 0x03) { // I-type, ORI, SRAI, LB, LW
@@ -113,21 +120,21 @@ DecodedInstruction CPU::decode(unsigned int instruction) {
 			// send signal for ORI
 			if (decoded.funct3 == 6){
         		decoded.immediate = ((int)instruction) >> 20; // Sign-extend
-				cout << "ORI" << endl;
+				// cout << "ORI" << endl;
 			}
 			else if (decoded.funct3 == 5) {
 				decoded.immediate = (instruction >> 20) & 0x1F;		// Extract shamt
-				cout << "SRAI" << endl;
+				// cout << "SRAI" << endl;
 			}
 			else cerr << "invalid instruction" << endl;
 		}
 		else if (decoded.funct3 == 0){ 	// Case for LB funct3 == 000
 			decoded.immediate = ((int)instruction) >> 20;
-			cout << "LB" << endl;
+			// cout << "LB" << endl;
 		}
 		else {							// Case for LW funct3 == 010
 			decoded.immediate = ((int)instruction) >> 20;
-			cout << "LW" << endl;
+			// cout << "LW" << endl;
 		}
     }
 
@@ -135,23 +142,29 @@ DecodedInstruction CPU::decode(unsigned int instruction) {
 		decoded.immediate = -1;
 
 		if (decoded.funct3 == 0){
-			cout << "Add" << endl;
+			// cout << "Add" << endl;
 		}
 		else if (decoded.funct3 == 4){
-			cout << "XOR" << endl;
+			// cout << "XOR" << endl;
 		}
 		else {
-			cerr << "invalid instruction" << endl;
+			// cerr << "invalid instruction" << endl;
 		}
 	}
 
 	else if (decoded.opcode == 0x37) { // U-type, LUI
-		decoded.immediate = ((int)instruction) >> 12;
+		decoded.immediate = instruction >> 12; // Shift left 12 bits to align upper 20 bits
 		decoded.rs2 = -1;
-		decoded.rs1 = -1;
+		decoded.rs1 = decoded.rd; 			// TODO: Changed this, not sure if this fixes issue
 		decoded.funct7 = -1;
 		decoded.funct3 = -1;
-		cout << "LUI" << endl;
+		// cout << "LUI" << endl;
+
+		// cout << "rd: " << decoded.rd << endl;
+		// cout << "funct3: " << decoded.funct3 << endl;
+		// cout << "rs1: " << decoded.rs1 << endl;
+		// cout << "rs2: " << decoded.rs2 << endl;
+		// cout << "funct7: " << decoded.funct7 << endl;	
 	}
 
 	else if (decoded.opcode == 0x23) { // S-type, SB, SW
@@ -160,10 +173,10 @@ DecodedInstruction CPU::decode(unsigned int instruction) {
 		decoded.immediate = extractSImmediate(instruction);
 
 		if (decoded.funct3 == 0){
-			cout << "SB" << endl;
+			// cout << "SB" << endl;
 		}
 		else if (decoded.funct3 == 2){
-			cout << "SW" << endl;
+			// cout << "SW" << endl;
 		}
 		else {
 			cerr << "invalid instruction" << endl;
@@ -174,17 +187,17 @@ DecodedInstruction CPU::decode(unsigned int instruction) {
 		decoded.immediate = extractBImmediate(instruction);
 		decoded.rd = -1;
 		decoded.funct7 = -1;
-		cout << "BEQ" << endl;
+		// cout << "BEQ" << endl;
 		// decoded.immediate = 
 	}
 
 	else if (decoded.opcode == 0x6f) { // J-type, JAL
 		decoded.immediate = extractJImmediate(instruction);
-		decoded.rs2 = -1;
-		decoded.rs1 = -1;
+		decoded.rs2 = decoded.rd;			// Also Dummy value
+		decoded.rs1 = decoded.rd; 			// Dummy value, gets reset
 		decoded.funct7 = -1;
 		decoded.funct3 = -1;
-		cout << "JAL" << endl;
+		// cout << "JAL" << endl;
 	}
 
     return decoded;
@@ -278,8 +291,6 @@ unsigned int CPU::generateALUControl(unsigned int ALUOp, unsigned int funct3, un
         case 4: // For LUI (load upper immediate), no ALU operation required
             return ALUOperation::SLL; // Could be treated as no-op for LUI
 
-        // Add other cases as needed
-
         default:
             cout << "Unknown ALUOp: " << ALUOp << endl;
             break;
@@ -295,8 +306,12 @@ unsigned int CPU::generateALUControl(unsigned int ALUOp, unsigned int funct3, un
 		- Control Signals: 
 */
 int CPU::execute(const DecodedInstruction instr, const ControlSignals signals, unsigned int ALUControl) {
-    int operand1 = registers[instr.rs1];   // Value from the source register rs1
-    int operand2;
+    // cout << "entered execution, rs1: " << instr.rs1 << endl;
+	int operand1 = registers[instr.rs1];   // Value from the source register rs1
+
+
+    // cout << "Operand1: "<< operand1 << endl;
+	int operand2;
 
     // Determine the second operand based on ALUSrc control signal
     if (signals.ALUSrc) {
@@ -304,6 +319,12 @@ int CPU::execute(const DecodedInstruction instr, const ControlSignals signals, u
     } else {
         operand2 = registers[instr.rs2]; // Use value from rs2 for R-type instructions
     }
+	if (instr.opcode == 0x6f){
+		operand1 = PC;
+		operand2 = 4;
+	} 
+
+	// cout << "operand2: " << operand2 << endl;
 
     int ALUResult = 0;
 
@@ -314,11 +335,15 @@ int CPU::execute(const DecodedInstruction instr, const ControlSignals signals, u
             break;
         
         case ALUOperation::SUB:  // For BEQ and comparison
+			// cout << "Entering sub" << endl;
             ALUResult = operand1 - operand2;
+			// cout << operand1 << ", " << operand2 << endl;
+			// cout << "Exiting sub, ALUResult: " << ALUResult << endl;
             break;
         
         case ALUOperation::SLL:  // Logical shift left (for LUI)
             ALUResult = operand2 << 12;
+			// cout << "ALUResult: " << ALUResult << endl;
             break;
         
         case ALUOperation::OR:   // For ORI
@@ -338,7 +363,8 @@ int CPU::execute(const DecodedInstruction instr, const ControlSignals signals, u
             break;
     }
 
-    // (Optional) You may want to store ALUResult in a temporary register for the next stage
+	// cout << "registers[instr.rs1]: " << registers[instr.rs1] << endl;
+	
     return ALUResult;
 }
 
@@ -347,7 +373,8 @@ int CPU::memoryAccess(const DecodedInstruction instr, const ControlSignals signa
 	int memoryData = 0;
 	if(signals.MemRead){				// Loading
 		if (instr.funct3 == 0x2) {
-			memoryData = dmemory[ALUResult / 4];
+			memoryData = dmemory[ALUResult];
+			// memoryData = dmemory[ALUResult / 4];
 		}
 		else if(instr.funct3 == 0x0) {
 			memoryData = dmemory[ALUResult] & 0xFF;
@@ -357,11 +384,15 @@ int CPU::memoryAccess(const DecodedInstruction instr, const ControlSignals signa
 
 	if(signals.MemWrite) {				// Storing
 		if (instr.funct3 == 0x2){
-			dmemory[ALUResult / 4] = registers[instr.rs2];
+			// dmemory[ALUResult / 4] = registers[instr.rs2];
+			dmemory[ALUResult] = registers[instr.rs2];
+			// cout << "Stored " << registers[instr.rs2] << " into " << ALUResult << endl; 
 		}
 		else if (instr.funct3 == 0x0){
 			dmemory[ALUResult] = registers[instr.rs2] & 0xFF;
+			// cout << "Stored " << (registers[instr.rs2] & 0xFF) << " into " << ALUResult << endl;
 		}
+		// cout << "I have stored stuff" << endl;
 	}
 
 	return memoryData;
@@ -369,12 +400,21 @@ int CPU::memoryAccess(const DecodedInstruction instr, const ControlSignals signa
 
 
 void CPU::writeBack(const DecodedInstruction instr, const ControlSignals signals, int result) {
-
-	if(signals.MemWrite) return;
-
-	if(signals.Branch && result != 0) return;
-	
+	// cout << "entered writeback" << endl;
+	// cout << signals.MemWrite << endl;
+	// cout << "Address of signals.MemWrite: " << &signals.MemWrite << endl;
+	if(signals.MemWrite) {
+		// cout << "exiting" << endl;
+		return;
+	}
+	if(signals.Branch) {
+		// cout << "Entered Writeback" << endl;
+		return;
+	} 
+	// cout << "Saving Result: instr.rd " << instr.rd << endl;
 	registers[instr.rd] = result;
+	// cout << "Results Saved, rd " << instr.rd << ": "<< registers[instr.rd] << endl;
+
 }
 
 void CPU::updatePC(const DecodedInstruction instr, const ControlSignals signals, int result){
@@ -395,4 +435,13 @@ void CPU::updatePC(const DecodedInstruction instr, const ControlSignals signals,
 
     // Default: Increment PC to next instruction
     PC += 4;
+}
+
+// int CPU::get_rd(const DecodedInstruction instr){
+// 	return registers[instr.rd];
+// }
+
+void CPU::get_result(int& a0, int& a1){
+	a0 = registers[10];
+	a1 = registers[11];
 }

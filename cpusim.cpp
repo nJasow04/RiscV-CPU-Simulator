@@ -69,12 +69,12 @@ int main(int argc, char* argv[])
     }
 
     int maxPC = i; // Set maxPC as the number of bytes loaded
-    cout << "Total bytes loaded: " << maxPC << endl;
+    // cout << "Total bytes loaded: " << maxPC << endl;
 
     // Test output to ensure bytes are stored correctly
     for (int j = 0; j < maxPC; j++) {
-        cout << hex << setw(2) << setfill('0') << (0xff & instrMem[j]) << " ";
-        if ((j + 1) % 4 == 0) cout << endl; // Print each 4 bytes as an instruction
+        // cout << hex << setw(2) << setfill('0') << (0xff & instrMem[j]) << " ";
+        // if ((j + 1) % 4 == 0) cout << endl; // Print each 4 bytes as an instruction
     }
 
 
@@ -92,46 +92,56 @@ int main(int argc, char* argv[])
 	/* OPTIONAL: Instantiate your Instruction object here. */
 	//Instruction myInst; 
 	
+	
 	bool done = true;
 	while (done == true) // processor's main loop. Each iteration is equal to one clock cycle.  
 	{
 		int result;
 		// fetch
 		unsigned long instr = myCPU.fetch();
-		cout << "0x" <<instr << endl;
+		// cout << "Fetched: 0x" << instr << endl;
 
-		// decode
+		// decode 
 		DecodedInstruction decoded_instr = myCPU.decode(instr);
-		cout << "Imm. : " << decoded_instr.immediate << endl;
+		// cout << "Decoded: Imm. : " << decoded_instr.immediate << endl;
 		
 		// Generating ControlSignals for execution
 		ControlSignals control_signals = myCPU.generateControlSignals(decoded_instr.opcode);
 		unsigned int ALUControl = myCPU.generateALUControl(control_signals.ALUOp, decoded_instr.funct3, decoded_instr.funct7);
-		cout << "ALU Op: " << control_signals.ALUOp << ", ALU Control Signal: " << ALUControl << endl;
+		// cout << "Created Signals: ALU Op: " << control_signals.ALUOp << ", ALU Control Signal: " << ALUControl << endl;
 
 		// execute
 		int ALUResult = myCPU.execute(decoded_instr, control_signals, ALUControl);
+		// cout << "Executed" << endl;
 
 		// memory
-		// if(decoded_instr.opcode == 0x23 || decoded_instr.opcode == 0x03){
 		int memoryData = 0;
 		if(control_signals.MemWrite || control_signals.MemRead) {	
 			memoryData = myCPU.memoryAccess(decoded_instr, control_signals, ALUResult);
+			// cout << "Memory Accessed" << endl;
 		}
+
+		
 
 		if(control_signals.MemRead) result = memoryData;
 		else result = ALUResult;
+
+		// cout << "ALUResult: " << result << endl;
 
 		myCPU.writeBack(decoded_instr, control_signals, result);
 
 		// write back
 		myCPU.updatePC(decoded_instr, control_signals, result);
+		// cout << "PC updated: " << myCPU.readPC() << endl;
+		// cout << endl;
 		 
 		if (myCPU.readPC() >= maxPC) 		// >= because we end up accessing memory we weren't supposed to
 			break;
 	}
-	int a0 =0;
-	int a1 =0;  
+	int a0;
+	int a1;
+	myCPU.get_result(a0, a1);
+
 	// print the results (you should replace a0 and a1 with your own variables that point to a0 and a1)
 	  cout << "(" << a0 << "," << a1 << ")" << endl;
 	

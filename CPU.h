@@ -46,6 +46,10 @@ public:
 	int memoryAccess(const DecodedInstruction instr, const ControlSignals signals, int ALUResult);            
 	void writeBack(const DecodedInstruction instr, const ControlSignals signals, int result);
     void updatePC(const DecodedInstruction instr, const ControlSignals signals, int result);
+
+	// int get_rd(const DecodedInstruction instr);
+
+	void get_result(int& a0, int& a1);
 };
 
 // add other functions and objects here
