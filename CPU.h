@@ -32,6 +32,8 @@ private:
 	int extractBImmediate(unsigned int instruction);
 	int extractJImmediate(unsigned int instruction);
 
+	// int ALU(DecodedInstruction instr, unsigned int ALUControl);
+
 public:
 	CPU(char* instrMem);
 	unsigned long readPC();
@@ -40,10 +42,10 @@ public:
 	DecodedInstruction decode(unsigned int instruction);
 	ControlSignals generateControlSignals(const unsigned int opcode);
 	unsigned int generateALUControl(unsigned int ALUOp, unsigned int funct3, unsigned int funct7);
-	// int execute(const DecodedInstruction instr, const ControlSignals signals, int rsd, int rs1, int rs2); 
-	// int memoryAccess(const DecodedInstruction& instr, const ControlSignals& signals, int ALUResult);            
-	// void writeBack(const DecodedInstruction& instr, const ControlSignals& signals, int result);
-    // void updatePC(const DecodedInstruction& instr, const ControlSignals& signals, int operand1, int operand2);
+	int execute(const DecodedInstruction instr, const ControlSignals signals, const unsigned int ALUControl);
+	int memoryAccess(const DecodedInstruction instr, const ControlSignals signals, int ALUResult);            
+	void writeBack(const DecodedInstruction instr, const ControlSignals signals, int result);
+    void updatePC(const DecodedInstruction instr, const ControlSignals signals, int operand1, int operand2);
 };
 
 // add other functions and objects here

@@ -93,6 +93,7 @@ int CPU::extractJImmediate(unsigned int instruction) {
     return immediate;
 }
 
+// Extract decoded instruction
 
 DecodedInstruction CPU::decode(unsigned int instruction) {
     DecodedInstruction decoded;
@@ -189,18 +190,6 @@ DecodedInstruction CPU::decode(unsigned int instruction) {
     return decoded;
 }
 
-
-// Generate Control Signals for Execution
-
-// ControlSignals generateControlSignals(const DecodedInstruction& instr) {
-// 	ControlSignals signals = {};
-	
-
-	
-
-// 	return signals;
-// }
-
 // Main Controller
 
 ControlSignals CPU::generateControlSignals( const unsigned int opcode) {
@@ -267,41 +256,6 @@ ControlSignals CPU::generateControlSignals( const unsigned int opcode) {
     return signals;
 }
 
-
-// ALU Controller
-
-// unsigned int CPU::generateALUControl(unsigned int ALUOp, unsigned int funct3, unsigned int funct7) {
-//     switch (ALUOp) {
-//         case 0: // For address calculation (e.g., load/store), use ADD
-//             return ALUOperation::ADD;
-
-//         case 1: // For I-type instructions
-//             if (funct3 == 0x6) return ALUOperation::OR;   // ORI
-//             if (funct3 == 0x5) return ALUOperation::SRA;  // SRAI
-//             break;
-
-//         case 2: // For R-type instructions
-//             if (funct3 == 0x0) return ALUOperation::ADD;
-//             if (funct3 == 0x4) return ALUOperation::XOR; // XOR
-//             break;
-
-//         case 3: // For branch instructions, typically use SUB to compare
-//             return ALUOperation::SUB;
-
-//         case 4: // For LUI (load upper immediate), no ALU operation required
-//             return ALUOperation::ADD; // Could be treated as no-op for LUI
-
-//         // Add other cases as needed
-
-//         default:
-//             cout << "Unknown ALUOp: " << ALUOp << endl;
-//             break;
-//     }
-//     return ALUOperation::ADD; // Default to ADD operation as a fallback
-// }
-
-
-
 // ALU Controller
 unsigned int CPU::generateALUControl(unsigned int ALUOp, unsigned int funct3, unsigned int funct7) {
     switch (ALUOp) {
@@ -322,7 +276,7 @@ unsigned int CPU::generateALUControl(unsigned int ALUOp, unsigned int funct3, un
             return ALUOperation::SUB;
 
         case 4: // For LUI (load upper immediate), no ALU operation required
-            return ALUOperation::ADD; // Could be treated as no-op for LUI
+            return ALUOperation::SLL; // Could be treated as no-op for LUI
 
         // Add other cases as needed
 
@@ -331,4 +285,114 @@ unsigned int CPU::generateALUControl(unsigned int ALUOp, unsigned int funct3, un
             break;
     }
     return ALUOperation::ADD; // Default to ADD operation as a fallback
+}
+
+// Execution time :)
+/* 
+	Returns writeback value
+	Parameters:
+		- Instruction: rd, rs1, rs2, immediate 
+		- Control Signals: 
+*/
+int CPU::execute(const DecodedInstruction instr, const ControlSignals signals, unsigned int ALUControl) {
+    int operand1 = registers[instr.rs1];   // Value from the source register rs1
+    int operand2;
+
+    // Determine the second operand based on ALUSrc control signal
+    if (signals.ALUSrc) {
+        operand2 = instr.immediate; // Use immediate for I-type instructions and similar cases
+    } else {
+        operand2 = registers[instr.rs2]; // Use value from rs2 for R-type instructions
+    }
+
+    int ALUResult = 0;
+
+    // Perform ALU operation based on ALUControl
+    switch (ALUControl) {
+        case ALUOperation::ADD:  // For ADD, LW, SW, etc.
+            ALUResult = operand1 + operand2;
+            break;
+        
+        case ALUOperation::SUB:  // For BEQ and comparison
+            ALUResult = operand1 - operand2;
+            break;
+        
+        case ALUOperation::SLL:  // Logical shift left (for LUI)
+            ALUResult = operand2 << 12;
+            break;
+        
+        case ALUOperation::OR:   // For ORI
+            ALUResult = operand1 | operand2;
+            break;
+        
+        case ALUOperation::XOR:  // For XOR
+            ALUResult = operand1 ^ operand2;
+            break;
+        
+        case ALUOperation::SRA:  // Arithmetic shift right for SRAI
+            ALUResult = operand1 >> (operand2 & 0x1F);
+            break;
+
+        default:
+            cout << "Unknown ALU operation." << endl;
+            break;
+    }
+
+    // (Optional) You may want to store ALUResult in a temporary register for the next stage
+    return ALUResult;
+}
+
+
+int CPU::memoryAccess(const DecodedInstruction instr, const ControlSignals signals, int ALUResult){
+	int memoryData = 0;
+	if(signals.MemRead){				// Loading
+		if (instr.funct3 == 0x2) {
+			memoryData = dmemory[ALUResult / 4];
+		}
+		else if(instr.funct3 == 0x0) {
+			memoryData = dmemory[ALUResult] & 0xFF;
+			if (memoryData & 0x80) memoryData |= 0xFFFFFF00;
+		}
+	}
+
+	if(signals.MemWrite) {				// Storing
+		if (instr.funct3 == 0x2){
+			dmemory[ALUResult / 4] = registers[instr.rs2];
+		}
+		else if (instr.funct3 == 0x0){
+			dmemory[ALUResult] = registers[instr.rs2] & 0xFF;
+		}
+	}
+
+	return memoryData;
+}
+
+
+void CPU::writeBack(const DecodedInstruction instr, const ControlSignals signals, int result) {
+
+	if(signals.MemWrite) return;
+
+	if(signals.Branch && result != 0) return;
+	
+	registers[instr.rd] = result;
+}
+
+void CPU::updatePC(const DecodedInstruction instr, const ControlSignals signals, int operand1, int operand2){
+	if (signals.Branch) {
+        // Check if the branch condition is met (e.g., BEQ: operand1 == operand2)
+        if (operand1 == operand2) {
+            // Update PC with branch offset, shifted left by 1 (branch offsets are in multiples of 2)
+            PC += instr.immediate;
+            return;
+        }
+    } 
+    
+    if (signals.Jump) {
+        // For JAL, PC is updated with the immediate offset (target address)
+        PC += instr.immediate;
+        return;
+    }
+
+    // Default: Increment PC to next instruction
+    PC += 4;
 }

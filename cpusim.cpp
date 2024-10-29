@@ -95,6 +95,7 @@ int main(int argc, char* argv[])
 	bool done = true;
 	while (done == true) // processor's main loop. Each iteration is equal to one clock cycle.  
 	{
+		int result;
 		// fetch
 		unsigned long instr = myCPU.fetch();
 		cout << "0x" <<instr << endl;
@@ -109,13 +110,25 @@ int main(int argc, char* argv[])
 		cout << "ALU Op: " << control_signals.ALUOp << ", ALU Control Signal: " << ALUControl << endl;
 
 		// execute
-
+		int ALUResult = myCPU.execute(decoded_instr, control_signals, ALUControl);
 
 		// memory
+		// if(decoded_instr.opcode == 0x23 || decoded_instr.opcode == 0x03){
+		int memoryData = 0;
+		if(control_signals.MemWrite || control_signals.MemRead) {	
+			memoryData = myCPU.memoryAccess(decoded_instr, control_signals, ALUResult);
+		}
+
+		if(control_signals.MemRead) result = memoryData;
+		else result = ALUResult;
+
+		myCPU.writeBack(decoded_instr, control_signals, result);
 
 		// write back
+		// int operand1 = myCPU.registers[decoded_instr.rs1];  // rs1 value
+		// int operand2 = myCPU.registers[decoded_instr.rs2];  // rs2 value (used for branch conditions)
+		// myCPU.updatePC(decoded_instr, control_signals, operand1, operand2);
 		 
-		myCPU.incPCtemp();
 		if (myCPU.readPC() >= maxPC) 		// >= because we end up accessing memory we weren't supposed to
 			break;
 	}
