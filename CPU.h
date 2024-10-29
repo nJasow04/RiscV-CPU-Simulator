@@ -45,7 +45,7 @@ public:
 	int execute(const DecodedInstruction instr, const ControlSignals signals, const unsigned int ALUControl);
 	int memoryAccess(const DecodedInstruction instr, const ControlSignals signals, int ALUResult);            
 	void writeBack(const DecodedInstruction instr, const ControlSignals signals, int result);
-    void updatePC(const DecodedInstruction instr, const ControlSignals signals, int operand1, int operand2);
+    void updatePC(const DecodedInstruction instr, const ControlSignals signals, int result);
 };
 
 // add other functions and objects here

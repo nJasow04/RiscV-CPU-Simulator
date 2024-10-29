@@ -125,9 +125,7 @@ int main(int argc, char* argv[])
 		myCPU.writeBack(decoded_instr, control_signals, result);
 
 		// write back
-		// int operand1 = myCPU.registers[decoded_instr.rs1];  // rs1 value
-		// int operand2 = myCPU.registers[decoded_instr.rs2];  // rs2 value (used for branch conditions)
-		// myCPU.updatePC(decoded_instr, control_signals, operand1, operand2);
+		myCPU.updatePC(decoded_instr, control_signals, result);
 		 
 		if (myCPU.readPC() >= maxPC) 		// >= because we end up accessing memory we weren't supposed to
 			break;

@@ -377,10 +377,10 @@ void CPU::writeBack(const DecodedInstruction instr, const ControlSignals signals
 	registers[instr.rd] = result;
 }
 
-void CPU::updatePC(const DecodedInstruction instr, const ControlSignals signals, int operand1, int operand2){
+void CPU::updatePC(const DecodedInstruction instr, const ControlSignals signals, int result){
 	if (signals.Branch) {
         // Check if the branch condition is met (e.g., BEQ: operand1 == operand2)
-        if (operand1 == operand2) {
+        if (result == 0) {
             // Update PC with branch offset, shifted left by 1 (branch offsets are in multiples of 2)
             PC += instr.immediate;
             return;
